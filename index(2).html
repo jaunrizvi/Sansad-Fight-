@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#091326">
+<title>Sansad Fight — Cartoon Arena</title>
+<style>
+:root{--gold:#ffd166;--panel:rgba(6,13,28,.9);--line:#ffffff35}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#07101f;color:#fff;font-family:system-ui,Arial,sans-serif;touch-action:none}
+#game{position:fixed;inset:0}canvas{display:block;width:100%;height:100%}
+#hud{position:fixed;z-index:5;top:9px;left:10px;right:10px;display:flex;justify-content:space-between;gap:12px;pointer-events:none}
+.fhud{width:min(39vw,390px);padding:9px 12px;border:1px solid var(--line);border-radius:13px;background:var(--panel);backdrop-filter:blur(8px)}
+.fname{font-weight:900;font-size:clamp(12px,2.2vw,20px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hbar{height:13px;background:#4b1e2c;border-radius:20px;overflow:hidden;margin-top:5px}.hfill{height:100%;width:100%;background:linear-gradient(90deg,#ff416c,#ffb347);transition:width .15s}
+#h2{background:linear-gradient(90deg,#00c6ff,#4361ee)}
+.hsub{font-size:10px;color:#c7d3e7;margin-top:4px}
+#timer{position:fixed;z-index:6;top:13px;left:50%;transform:translateX(-50%);font-size:clamp(24px,4vw,40px);font-weight:1000;color:var(--gold);text-shadow:0 3px 12px #000}
+#top{position:fixed;z-index:7;top:78px;left:50%;transform:translateX(-50%);display:flex;gap:7px}
+button,select{border:1px solid #ffffff40;background:#192946;color:#fff;border-radius:10px;padding:9px 12px;font-weight:800}
+button{cursor:pointer}button:active{transform:scale(.97)}button.primary{background:#b5234e}
+#caption{position:fixed;z-index:6;top:125px;left:50%;transform:translateX(-50%);font-size:clamp(16px,3vw,28px);font-weight:1000;text-align:center;text-shadow:0 3px 9px #000;pointer-events:none;max-width:90vw}
+#menu,#result{position:fixed;z-index:10;inset:0;background:radial-gradient(ellipse at top,#263e62,#07101f 70%);display:flex;align-items:center;justify-content:center;padding:14px;overflow:auto}
+.card{width:min(760px,100%);max-height:94vh;overflow:auto;background:#0d1930f2;border:1px solid #ffffff30;border-radius:20px;padding:clamp(15px,3vw,25px);box-shadow:0 20px 80px #000a}
+h1{font-size:clamp(29px,6vw,48px);color:var(--gold);text-align:center;margin:0;letter-spacing:1px}
+.sub{text-align:center;color:#c0cee3;margin:4px 0 17px;font-size:13px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field{background:#081326;padding:11px;border-radius:12px;border:1px solid #ffffff12}
+.field label{display:block;color:#9fb2d0;font-size:11px;margin-bottom:6px;font-weight:800}
+select{width:100%;padding:10px}
+.btnrow{display:flex;gap:9px;margin-top:13px}.btnrow button{flex:1;padding:13px}
+.note{font-size:11px;color:#9fb2d0;line-height:1.5;margin:12px 0 0}
+#rotate{display:none;position:fixed;z-index:20;inset:0;background:#07101f;color:#fff;align-items:center;justify-content:center;text-align:center;padding:25px;font-weight:800}
+#rotate .phone{font-size:50px;display:block;margin-bottom:12px}
+#controls{position:fixed;z-index:6;bottom:10px;left:10px;right:10px;display:flex;justify-content:space-between;align-items:end;pointer-events:none}
+.pad,.attacks{display:flex;gap:6px;pointer-events:auto;align-items:center}
+.ctrl{width:clamp(39px,7vw,57px);height:clamp(39px,7vw,57px);border-radius:50%;padding:0;background:#142747eF;border:1px solid #ffffff70;font-size:17px;touch-action:none}
+.ctrl.hit{width:clamp(47px,8vw,64px);height:clamp(47px,8vw,64px);background:#a6234beF;font-size:19px}
+#hint{position:fixed;z-index:4;bottom:75px;left:50%;transform:translateX(-50%);font-size:10px;color:#d6e2f3;background:#07101dcc;border-radius:8px;padding:6px 10px;white-space:nowrap}
+#result{display:none;background:#020711dd}
+#result .card{max-width:440px;text-align:center}
+@media(orientation:portrait) and (max-width:800px){#rotate{display:flex}#menu{display:flex!important}body.playing #menu{display:none!important}}
+@media(max-width:600px){#top{top:72px}.fhud{padding:7px 8px}.hsub{font-size:8px}.grid{gap:7px}.field{padding:8px}.hint{display:none}#caption{top:117px}}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="hud">
+ <div class="fhud"><div class="fname" id="name1">PLAYER 1</div><div class="hbar"><div class="hfill" id="h1"></div></div><div class="hsub">P1 · WASD + F / G / H</div></div>
+ <div class="fhud"><div class="fname" id="name2">PLAYER 2</div><div class="hbar"><div class="hfill" id="h2"></div></div><div class="hsub" id="p2sub">CPU FIGHTER</div></div>
+</div>
+<div id="timer">90</div>
+<div id="top"><button id="voice">🔊 VOICE ON</button><button id="pause">Ⅱ PAUSE</button></div>
+<div id="caption">CHOOSE YOUR FIGHTERS</div>
+<div id="hint">P1: WASD · F punch · G kick · H special | P2: Arrows · K / L / ;</div>
+<div id="controls">
+ <div class="pad"><button class="ctrl" data-key="w">▲</button><button class="ctrl" data-key="a">◀</button><button class="ctrl" data-key="s">▼</button><button class="ctrl" data-key="d">▶</button></div>
+ <div class="attacks"><button class="ctrl hit" data-key="f">👊</button><button class="ctrl hit" data-key="g">🦵</button><button class="ctrl hit" data-key="h">⚡</button></div>
+</div>
+<div id="rotate"><div><span class="phone">📱 ↻</span>Please rotate your phone to landscape mode for the battle arena.</div></div>
+<div id="menu"><div class="card">
+ <h1>SANSAD FIGHT</h1><div class="sub">3D Cartoon Politician Battle Arena</div>
+ <div class="grid">
+  <div class="field"><label>GAME MODE</label><select id="mode"><option value="cpu">Single Player vs Computer</option><option value="local">Local 2 Player</option></select></div>
+  <div class="field"><label>BATTLE ARENA / THEME</label><select id="arena"><option value="parliament">🏛️ Parliament</option><option value="street">🏙️ Delhi Street</option><option value="jantar">🕌 Jantar Mantar</option><option value="village">🌾 Village</option></select></div>
+  <div class="field"><label>PLAYER 1 CHARACTER</label><select id="c1"></select></div>
+  <div class="field"><label>PLAYER 2 / COMPUTER</label><select id="c2"></select></div>
+  <div class="field"><label>ROUND TIME</label><select id="round"><option>60</option><option selected>90</option><option>120</option></select></div>
+  <div class="field"><label>VOICE EFFECTS</label><select id="voiceChoice"><option value="on">Voice ON</option><option value="off">Voice OFF</option></select></div>
+ </div>
+ <div class="btnrow"><button class="primary" id="start">START FIGHT 🔥</button><button id="how">HOW TO PLAY</button></div>
+ <p class="note">Cartoon caricatures are playful fictional game artwork, not realistic portraits. Audio clips are the files uploaded by the player and are used as meme sound effects. Landscape mode is recommended; supported phones may lock orientation after Start.</p>
+</div></div>
+<div id="result"><div class="card"><h1 id="winner">WINNER!</h1><p id="resultline">Round over</p><button class="primary" id="again">PLAY AGAIN</button></div></div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const cast=[
+ {name:"Narendra Modi",skin:0xb97850,coat:0xe6dfd2,hair:0xeeeeea,beard:0xe5e0d5,kind:"modi"},
+ {name:"Rahul Gandhi",skin:0xb77b55,coat:0xffffff,hair:0x24201d,beard:0x302923,kind:"rahul"},
+ {name:"Mamata Banerjee",skin:0xc48a69,coat:0xf1f1ed,hair:0x24201e,beard:null,kind:"mamata"},
+ {name:"Nitin Gadkari",skin:0xb77c58,coat:0x253c5d,hair:0x282521,beard:null,kind:"gadkari"},
+ {name:"Yogi Adityanath",skin:0xb87952,coat:0xff8b22,hair:0x30251f,beard:null,kind:"yogi"}
+];
+// Keep these filenames exactly as uploaded to the GitHub repository (same folder as index.html).
+const sound={
+ modiDidi:"modi_didi_o_didi.mp3",
+ mamataHumbaa:"mamata_humbaa.mp3",
+ rahulKhatam:"rahul_khatam_tata.mp3",
+ sajjan:"gadkari_sajjan.mp3"
+};
+// Specific opponent pair sounds. Key format: attacker>defender.
+const pairSound={
+ "Narendra Modi>Mamata Banerjee":sound.modiDidi,
+ "Mamata Banerjee>Narendra Modi":sound.mamataHumbaa,
+ "Rahul Gandhi>Narendra Modi":sound.rahulKhatam,
+ "Narendra Modi>Rahul Gandhi":sound.sajjan
+};
+const fallbackSound={
+ "Narendra Modi":sound.modiDidi,
+ "Rahul Gandhi":sound.rahulKhatam,
+ "Mamata Banerjee":sound.mamataHumbaa,
+ "Nitin Gadkari":sound.sajjan,
+ "Yogi Adityanath":sound.sajjan
+};
+cast.forEach((c,i)=>["c1","c2"].forEach(id=>{let o=document.createElement("option");o.value=i;o.textContent=c.name;$(id).appendChild(o)}));
+$("c2").value="2";
+let scene,camera,renderer,clock,players=[],keys={},running=false,paused=false,mode="cpu",time=90,voiceOn=true,currentArena="parliament",audioNow=null;
+const mat=c=>new THREE.MeshStandardMaterial({color:c,roughness:.82});
+function mesh(parent,geo,material,pos,scale){let m=new THREE.Mesh(geo,material);m.position.set(...pos);if(scale)m.scale.set(...scale);parent.add(m);return m}
+function box(parent,material,pos,scale){return mesh(parent,new THREE.BoxGeometry(...scale),material,pos)}
+function ball(parent,material,pos,scale){return mesh(parent,new THREE.SphereGeometry(1,20,16),material,pos,scale)}
+function cylinder(parent,material,pos,r1,r2,h){return mesh(parent,new THREE.CylinderGeometry(r1,r2,h,20),material,pos)}
+function addTextSign(text,x,y,z,color=0xffe7a3){ // simple decorative sign panel
+ let board=box(scene,mat(0x18243b),[x,y,z],[2.2,.55,.12]);
+ let canvas=document.createElement("canvas");canvas.width=512;canvas.height=128;let ctx=canvas.getContext("2d");
+ ctx.fillStyle="#18243b";ctx.fillRect(0,0,512,128);ctx.fillStyle="#fff0bd";ctx.font="bold 48px Arial";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(text,256,66);
+ let tex=new THREE.CanvasTexture(canvas);board.material=new THREE.MeshBasicMaterial({map:tex});
+}
+function buildArena(type){
+ currentArena=type;
+ const ground=type==="village"?0x8a754b:type==="street"?0x454b56:type==="jantar"?0xb4774e:0x343b50;
+ scene.background=new THREE.Color(type==="village"?0x9bc9e5:type==="street"?0x8399b3:type==="jantar"?0xd7a16d:0x778eaa);
+ scene.fog=new THREE.Fog(scene.background,18,42);
+ let floor=mesh(scene,new THREE.CylinderGeometry(6.7,6.7,.28,64),mat(ground),[0,-.28,0]);
+ let ring=mesh(scene,new THREE.TorusGeometry(5.95,.065,10,90),mat(type==="village"?0xf5d27a:0xffd166),[0,-.1,0]);ring.rotation.x=Math.PI/2;
+ mesh(scene,new THREE.CylinderGeometry(7.6,7.6,.3,64),mat(0x151d2b),[0,-.52,0]);
+ // backdrop and theme props
+ if(type==="parliament"){
+   box(scene,mat(0x8b9aa8),[0,2.1,-8],[14,4.2,.5]);
+   cylinder(scene,mat(0xc7bda8),[0,4.5,-8],1.1,1.1,.5);
+   for(let x=-5.5;x<=5.5;x+=1.1){let col=cylinder(scene,mat(0xe0d6c4),[x,1.6,-7.55],.13,.13,2.8);box(scene,mat(0xe0d6c4),[x,3.05,-7.55],[.38,.18,.4])}
+   box(scene,mat(0x5e7187),[0,.15,-7.65],[13,.35,.3]);addTextSign("PARLIAMENT OF INDIA",0,4.2,-7.35);
+   for(let x of [-7,7]){cylinder(scene,mat(0x667d92),[x,1.8,-5],.18,.18,3.6)}
+ }else if(type==="street"){
+   for(let side of [-1,1]){for(let i=0;i<4;i++){let x=side*(6.5+i*.45);box(scene,mat([0xe1a16b,0x7898a8,0xb8a0cf,0xd7c17d][i]),[x,1.2,-5-i*.7],[2.2,2.4,.6]);for(let y=.6;y<2;y+=.8)box(scene,mat(0x293a50),[x,y,-4.66-i*.7],[.45,.45,.05])}}
+   box(scene,mat(0x202a37),[0,-.03,-5],[14,.2,5]);addTextSign("DELHI STREET",0,3.3,-5);
+   for(let x of [-5,5]){cylinder(scene,mat(0x3e4854),[x,2,-3],.09,.09,4);ball(scene,mat(0xffe8a0),[x,4,-3],[.18,.18,.18])}
+ }else if(type==="jantar"){
+   let terr=mat(0xc77f4c),cream=mat(0xe0a36b);
+   for(let x of [-5,-2.8,0,2.8,5]){box(scene,terr,[x,1.5,-6],[1.3,3,.7]);box(scene,cream,[x,3.1,-6],[1.55,.22,.9])}
+   let arc=mesh(scene,new THREE.TorusGeometry(2.3,.28,14,48,Math.PI),terr,[0,1.2,-6]);arc.rotation.z=Math.PI;
+   box(scene,terr,[0,2.4,-6],[.5,4,.65]);addTextSign("JANTAR MANTAR",0,4.2,-5.5);
+   for(let x of [-6,6])cylinder(scene,terr,[x,.9,-5],.5,.5,1.8);
+ }else{
+   let sky=mat(0x4d8a47);
+   for(let x of [-6,-4,4,6]){cylinder(scene,mat(0x68462c),[x,1,-5],.18,.24,2);ball(scene,sky,[x,2.2,-5],[.9,1,.9])}
+   for(let x of [-4.8,4.8]){let hut=mesh(scene,new THREE.ConeGeometry(1.8,1.4,4),mat(0x9a542e),[x,2,-6]);hut.rotation.y=Math.PI/4;box(scene,mat(0xc88c4e),[x,1,-6],[2.3,1.8,1.7]);box(scene,mat(0x39271d),[x,.65,-5.1],[.55,1.1,.08])}
+   addTextSign("WELCOME TO VILLAGE",0,3.5,-6);
+   for(let x=-7;x<=7;x+=1.4){cylinder(scene,mat(0x967447),[x,.1,-2.8],.035,.035,2.5)}
+ }
+ // distant soft lights
+ let hemi=new THREE.HemisphereLight(0xe3f2ff,0x51402e,2.1);scene.add(hemi);
+ let sun=new THREE.DirectionalLight(0xffffff,2.1);sun.position.set(-4,9,6);scene.add(sun);
+}
+function makeFighter(index,ci,x){
+ const c=cast[ci],root=new THREE.Group();scene.add(root);root.position.set(x,0,index===0?0:.15);
+ const skin=mat(c.skin),cloth=mat(c.coat),hair=mat(c.hair),dark=mat(0x202633),white=mat(0xf6f3e9),shoe=mat(0x191b21),accent=mat(c.kind==="yogi"?0xffc04a:c.kind==="modi"?0x9b7657:c.kind==="mamata"?0x1e5eaa:0x283d5b);
+ // torso, collar and scarf/jacket
+ box(root,cloth,[0,1.2,0],[.78,.92,.43]);box(root,accent,[0,1.62,.02],[.38,.16,.45]);
+ if(c.kind==="modi"){box(root,mat(0x9b7657),[0,1.23,.225],[.14,.72,.025]);ball(root,mat(0xe4e0d4),[0,1.85,0],[.35,.12,.32])}
+ if(c.kind==="rahul"){box(root,white,[0,1.3,.23],[.12,.7,.035]);box(root,mat(0x2c4770),[0,1.62,.25],[.42,.08,.05])}
+ if(c.kind==="mamata"){box(root,white,[0,1.15,.23],[.18,.7,.04]);box(root,mat(0x3675b9),[.34,1.35,.03],[.13,.5,.16])}
+ if(c.kind==="yogi"){box(root,mat(0xffbd59),[0,1.2,.23],[.5,.55,.04]);ball(root,mat(0xff9f31),[0,2.23,0],[.38,.15,.34])}
+ if(c.kind==="gadkari"){box(root,mat(0x334e70),[0,1.18,.23],[.48,.52,.04])}
+ // neck and oversized cartoon head
+ cylinder(root,skin,[0,1.77,0],.14,.14,.25);
+ ball(root,skin,[0,2.06,0],[.38,.43,.34]);
+ // hair silhouettes
+ if(c.kind==="modi"){ball(root,hair,[0,2.37,-.02],[.36,.16,.33]);ball(root,hair,[-.28,2.22,0],[.12,.2,.28]);}
+ else if(c.kind==="rahul"){ball(root,hair,[0,2.39,-.015],[.38,.18,.34]);for(let i=-2;i<=2;i++)ball(root,hair,[i*.12,2.46,.05],[.11,.12,.12]);}
+ else if(c.kind==="mamata"){ball(root,hair,[0,2.35,-.04],[.4,.22,.35]);ball(root,hair,[.27,2.17,-.02],[.12,.22,.25]);}
+ else if(c.kind==="gadkari"){ball(root,hair,[0,2.39,0],[.35,.13,.3]);}
+ else {ball(root,hair,[0,2.37,0],[.36,.15,.33]);}
+ // face: eyes, brows, nose, smile
+ for(let s of [-1,1]){ball(root,white,[s*.14,2.11,.295],[.085,.065,.035]);ball(root,dark,[s*.14,2.11,.327],[.032,.04,.02]);box(root,hair,[s*.14,2.22,.29],[.14,.045,.035])}
+ ball(root,skin,[0,2.02,.34],[.075,.1,.075]);box(root,dark,[0,1.91,.31],[.16,.025,.035]);
+ if(c.kind==="modi"){ball(root,mat(0xe5e0d5),[0,1.96,.28],[.25,.15,.18]);}
+ if(c.kind==="rahul"){ball(root,mat(0x302923),[0,1.96,.29],[.28,.12,.18]);}
+ if(c.kind==="yogi"){ball(root,mat(0x39291e),[0,1.94,.29],[.24,.14,.16]);}
+ if(c.kind==="gadkari"){ball(root,mat(0x4c4034),[0,1.96,.29],[.22,.09,.15]);}
+ // ears
+ for(let s of [-1,1])ball(root,skin,[s*.37,2.05,0],[.09,.13,.09]);
+ // limbs with pivot joints
+ const arms=[],legs=[];
+ for(let s of [-1,1]){
+  let arm=new THREE.Group();arm.position.set(s*.43,1.48,0);root.add(arm);
+  ball(arm,cloth,[s*.11,-.2,0],[.17,.25,.17]);ball(arm,skin,[s*.17,-.45,.02],[.13,.15,.13]);arms.push(arm);
+  let leg=new THREE.Group();leg.position.set(s*.2,.78,0);root.add(leg);
+  box(leg,dark,[0,-.24,0],[.22,.48,.23]);box(leg,shoe,[0,-.49,.09],[.27,.15,.39]);legs.push(leg);
+ }
+ // Character-specific accessory
+ if(c.kind==="modi"){let bead=mesh(root,new THREE.TorusGeometry(.17,.035,8,24),mat(0xd9b56c),[0,1.52,.24]);}
+ if(c.kind==="mamata"){box(root,mat(0x3978b7),[.39,1.32,0],[.12,.48,.16])}
+ if(c.kind==="yogi"){let shawl=box(root,mat(0xffc35b),[.3,1.3,.03],[.14,.65,.23]);shawl.rotation.z=-.25}
+ return {root,arms,legs,hp:100,cool:0,attack:0,stun:0,walk:0,character:ci,name:c.name};
+}
+function clearScene(){if(scene){scene.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material.dispose()}})}if(renderer){renderer.dispose();renderer.domElement.remove()}players=[]}
+function resize(){if(!renderer)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)}
+function playHit(attacker,defender){
+ if(!voiceOn)return;
+ let key=attacker.name+">"+defender.name;
+ let file=pairSound[key]||fallbackSound[attacker.name];
+ if(!file)return;
+ if(audioNow){audioNow.pause();audioNow=null}
+ audioNow=new Audio(file);audioNow.volume=.9;audioNow.play().catch(()=>{});
+ const lines={
+  "Narendra Modi>Mamata Banerjee":"DIDI O DIDI!",
+  "Mamata Banerjee>Narendra Modi":"HUMBAA HUMBAA!",
+  "Rahul Gandhi>Narendra Modi":"KHATAM TATA!",
+  "Narendra Modi>Rahul Gandhi":"IS SAJJAN KO KYA TAKLEEF HAI BHAI?"
+ };
+ $("caption").textContent=lines[key]||"ZABARDAST HIT!";
+}
+function updateHud(){$("h1").style.width=players[0].hp+"%";$("h2").style.width=players[1].hp+"%"}
+function hit(a,d,damage){if(!running||paused||a.cool>0||a.stun>0)return;a.cool=.5;a.attack=.25;
+ if(a.root.position.distanceTo(d.root.position)<2.35){d.hp=Math.max(0,d.hp-damage);d.stun=.18;playHit(a,d);updateHud()}}
+function finish(w){running=false;$("winner").textContent=w===2?"DRAW!":players[w].name+" WINS!";$("resultline").textContent="Round complete — "+cast[players[0].character].name+" vs "+cast[players[1].character].name;$("result").style.display="flex"}
+function update(dt){
+ if(!running||paused)return;time-=dt;$("timer").textContent=Math.max(0,Math.ceil(time));
+ const p=players[0],q=players[1];
+ function move(f,up,down,left,right){if(f.stun>0){f.stun-=dt;return}let sp=3.4*dt;
+ if(keys[up])f.root.position.z-=sp;if(keys[down])f.root.position.z+=sp;if(keys[left])f.root.position.x-=sp;if(keys[right])f.root.position.x+=sp;
+ f.root.position.x=THREE.MathUtils.clamp(f.root.position.x,-4.8,4.8);f.root.position.z=THREE.MathUtils.clamp(f.root.position.z,-3.2,3.2);
+ f.walk+=dt*9;f.legs.forEach((l,i)=>l.rotation.x=(keys[up]||keys[down]||keys[left]||keys[right])?Math.sin(f.walk+i*Math.PI)*.45:0)}
+ move(p,"w","s","a","d");
+ if(mode==="local")move(q,"ArrowUp","ArrowDown","ArrowLeft","ArrowRight");
+ else if(q.stun<=0){let dx=p.root.position.x-q.root.position.x,dz=p.root.position.z-q.root.position.z,dist=Math.hypot(dx,dz);
+ if(dist>1.55){q.root.position.x+=Math.sign(dx)*dt*1.65;q.root.position.z+=Math.sign(dz)*dt*1.4}
+ if(dist<2.1&&q.cool<=0&&Math.random()<.035)hit(q,p,10)}
+ players.forEach(f=>{f.cool=Math.max(0,f.cool-dt);f.attack=Math.max(0,f.attack-dt);f.arms.forEach((a,i)=>a.rotation.x=f.attack>0?-1.65:0);});
+ p.root.lookAt(q.root.position.x,0,q.root.position.z);q.root.lookAt(p.root.position.x,0,p.root.position.z);
+ if(p.hp<=0||q.hp<=0)finish(p.hp<=0?1:0);else if(time<=0)finish(p.hp===q.hp?2:p.hp>q.hp?0:1);
+}
+function animate(){requestAnimationFrame(animate);if(!renderer)return;let dt=Math.min(clock.getDelta(),.04);update(dt);renderer.render(scene,camera)}
+function init(){
+ scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(45,innerWidth/innerHeight,.1,100);camera.position.set(0,6.3,11.5);camera.lookAt(0,1.3,-.3);
+ renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.8));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;$("game").appendChild(renderer.domElement);
+ buildArena(currentArena);
+ players=[makeFighter(0,+$("c1").value,-2.1),makeFighter(1,+$("c2").value,2.1)];
+ players[0].root.rotation.y=Math.PI/2;players[1].root.rotation.y=-Math.PI/2;
+ clock=new THREE.Clock();window.addEventListener("resize",resize);animate();
+}
+function start(){
+ if(!window.THREE){alert("3D engine load nahi hua. Internet check karke reload karo.");return}
+ clearScene();mode=$("mode").value;currentArena=$("arena").value;time=+$("round").value;voiceOn=$("voiceChoice").value==="on";running=true;paused=false;keys={};
+ $("name1").textContent=cast[+$("c1").value].name;$("name2").textContent=cast[+$("c2").value].name;$("p2sub").textContent=mode==="cpu"?"COMPUTER · AI":"P2 · ARROWS + K / L / ;";
+ $("menu").style.display="none";$("result").style.display="none";document.body.classList.add("playing");$("caption").textContent="FIGHT!";
+ if(screen.orientation&&screen.orientation.lock)screen.orientation.lock("landscape").catch(()=>{});
+ if(document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().catch(()=>{});
+ init();updateHud();
+}
+$("start").onclick=start;
+$("how").onclick=()=>alert("Landscape mode recommended. Player 1: WASD move, F punch, G kick, H special. Local Player 2: Arrow keys move, K punch, L kick, ; special. Mobile par left-side arrows aur right-side attack buttons use karo. Opponent ke paas jaakar hit karo.");
+$("voice").onclick=()=>{voiceOn=!voiceOn;$("voice").textContent=voiceOn?"🔊 VOICE ON":"🔇 VOICE OFF"};
+$("pause").onclick=()=>{paused=!paused;$("pause").textContent=paused?"▶ RESUME":"Ⅱ PAUSE";$("caption").textContent=paused?"PAUSED":"FIGHT!"};
+$("again").onclick=()=>{$("result").style.display="none";$("menu").style.display="flex";document.body.classList.remove("playing");running=false;if(document.exitFullscreen&&document.fullscreenElement)document.exitFullscreen().catch(()=>{})};
+window.addEventListener("keydown",e=>{let k=e.key.length===1?e.key.toLowerCase():e.key;if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key))e.preventDefault();keys[k]=true;if(!running)return;
+ if(k==="f")hit(players[0],players[1],8);if(k==="g")hit(players[0],players[1],13);if(k==="h")hit(players[0],players[1],20);
+ if(mode==="local"){if(k==="k")hit(players[1],players[0],8);if(k==="l")hit(players[1],players[0],13);if(k===";")hit(players[1],players[0],20)}
+});
+window.addEventListener("keyup",e=>{let k=e.key.length===1?e.key.toLowerCase():e.key;keys[k]=false});
+document.querySelectorAll("[data-key]").forEach(b=>{let k=b.dataset.key;b.addEventListener("pointerdown",e=>{e.preventDefault();keys[k]=true;if(k==="f")hit(players[0],players[1],8);if(k==="g")hit(players[0],players[1],13);if(k==="h")hit(players[0],players[1],20)});["pointerup","pointerleave","pointercancel"].forEach(ev=>b.addEventListener(ev,()=>keys[k]=false))});
+})();
+</script>
+</body>
+</html>
